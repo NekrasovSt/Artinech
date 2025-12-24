@@ -4,51 +4,53 @@ using Test.Validation;
 
 namespace Test;
 
-internal class Inventory<T> : IInventory<T> where T : IItem
+internal class Inventory : IInventory
 {
-    private readonly Dictionary<string, T> _items = new();
+    private readonly Dictionary<string, int> _items = new();
     private readonly ReaderWriterLockSlim _lock = new();
-    public IReadOnlyList<T> Items
+
+    public IReadOnlyList<IItem> Items
     {
         get
         {
             _lock.EnterReadLock();
             try
             {
-                return _items.Values.ToList().AsReadOnly();
+                return _items.Keys.Select(i => new Item() { Name = i, Weight = _items[i] }).ToList().AsReadOnly();
             }
             finally
             {
-                _lock.ExitReadLock();                
+                _lock.ExitReadLock();
             }
         }
     }
 
     private readonly ItemValidator _itemValidator = new();
 
-    public void AddItem(T item)
+    public void AddItem(string name, int weight)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        if (!_itemValidator.Validate(item).IsValid)
+        ArgumentNullException.ThrowIfNull(name);
+        if (!_itemValidator.Validate(new Item() { Name = name, Weight = weight }).IsValid)
         {
             throw new InvalidOperationException();
         }
+
         _lock.EnterWriteLock();
         try
         {
-            var currentSum = _items.Values.Sum(i => i.Weight);
-            if (currentSum + item.Weight > ItemValidator.MAX_WEIGHT)
+            var currentSum = _items.Values.Sum();
+            if (currentSum + weight > ItemValidator.MAX_WEIGHT)
             {
                 throw new InvalidOperationException();
             }
 
-            if (_items.TryGetValue(item.Name, out var exist))
+            if (_items.TryGetValue(name, out var exist))
             {
-                exist.Weight = item.Weight + exist.Weight;
+                _items[name] = exist + weight;
             }
             else
             {
-                _items.TryAdd(item.Name, item);
+                _items.TryAdd(name, weight);
             }
         }
         finally
@@ -57,13 +59,13 @@ internal class Inventory<T> : IInventory<T> where T : IItem
         }
     }
 
-    public bool RemoveItem(T item)
+    public bool RemoveItem(string name)
     {
-        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(name);
         _lock.EnterWriteLock();
         try
         {
-            return _items.Remove(item.Name, out _);
+            return _items.Remove(name, out _);
         }
         finally
         {
@@ -71,7 +73,7 @@ internal class Inventory<T> : IInventory<T> where T : IItem
         }
     }
 
-    public T? FindItemByName(string substring)
+    public IItem? FindItemByName(string substring)
     {
         _lock.EnterReadLock();
         try
@@ -79,10 +81,15 @@ internal class Inventory<T> : IInventory<T> where T : IItem
             var key = _items.Keys.FirstOrDefault(i => i.Contains(substring, StringComparison.CurrentCultureIgnoreCase));
             if (string.IsNullOrEmpty(key))
             {
-                return default;
+                return null;
             }
 
-            return _items.GetValueOrDefault(key);
+            if (_items.TryGetValue(key, out var exist))
+            {
+                return new Item() { Name = key, Weight = exist };
+            }
+
+            return null;
         }
         finally
         {

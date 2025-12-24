@@ -1,12 +1,12 @@
 namespace Common.Interfaces;
 
-public interface IInventory<T> where T : IItem
+public interface IInventory
 {
-    IReadOnlyList<T> Items { get; }
+    IReadOnlyList<IItem> Items { get; }
 
-    void AddItem(T item);
+    void AddItem(string name, int weight);
 
-    bool RemoveItem(T item);
+    bool RemoveItem(string name);
     
-    T? FindItemByName(string substring);
+    IItem? FindItemByName(string substring);
 }

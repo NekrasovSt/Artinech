@@ -1,17 +1,11 @@
 ﻿using Common.Interfaces;
 using Test;
-using UnitTests.Mock;
 
 namespace UnitTests;
 
 public class InventoryTests
 {
-    private readonly IInventory<TestItem> _inventoryCollection;
-
-    public InventoryTests()
-    {
-        _inventoryCollection = Factories.CreateInventoryCollection<TestItem>();
-    }
+    private readonly IInventory _inventoryCollection = Factories.CreateInventoryCollection();
 
     [Theory]
     [InlineData(-1)]
@@ -19,44 +13,26 @@ public class InventoryTests
     [InlineData(150)]
     public void ValidateWeightIncorrect(int weight)
     {
-        // arrange
-        var item = new TestItem
-        {
-            Weight = weight
-        };
-
         // Act
-        Assert.Throws<InvalidOperationException>(() => _inventoryCollection.AddItem(item));
+        Assert.Throws<InvalidOperationException>(() => _inventoryCollection.AddItem("Some", weight));
     }
 
     [Fact]
     public void OverWeight()
     {
         // Arrange
-        var item = new TestItem
-        {
-            Weight = 99,
-            Name = "Test"
-        };
-        _inventoryCollection.AddItem(item);
+        _inventoryCollection.AddItem("Test", 99);
 
         // Act
         Assert.Throws<InvalidOperationException>(() =>
-            _inventoryCollection.AddItem(new TestItem() { Name = "Test2", Weight = 99 }));
+            _inventoryCollection.AddItem("Test2", 99));
     }
 
     [Fact]
     public void AddItemValidWeight()
     {
-        // arrange
-        var item = new TestItem
-        {
-            Weight = 20,
-            Name = "Test"
-        };
-
         // Act
-        _inventoryCollection.AddItem(item);
+        _inventoryCollection.AddItem("Test", 20);
 
         // Assert
         Assert.Single(_inventoryCollection.Items);
@@ -65,21 +41,9 @@ public class InventoryTests
     [Fact]
     public void AddDifferentItem()
     {
-        // arrange
-        var item1 = new TestItem
-        {
-            Weight = 20,
-            Name = "Test1"
-        };
-        var item2 = new TestItem
-        {
-            Weight = 20,
-            Name = "Test2"
-        };
-
         // Act
-        _inventoryCollection.AddItem(item1);
-        _inventoryCollection.AddItem(item2);
+        _inventoryCollection.AddItem("Test1", 20);
+        _inventoryCollection.AddItem("Test2", 20);
 
         // Assert
         Assert.Equal(2, _inventoryCollection.Items.Count);
@@ -88,21 +52,9 @@ public class InventoryTests
     [Fact]
     public void AddItemsSumWeight()
     {
-        // arrange
-        var item1 = new TestItem
-        {
-            Weight = 20,
-            Name = "Test"
-        };
-        var item2 = new TestItem
-        {
-            Weight = 20,
-            Name = "Test"
-        };
-
         // Act
-        _inventoryCollection.AddItem(item1);
-        _inventoryCollection.AddItem(item2);
+        _inventoryCollection.AddItem("Test", 20);
+        _inventoryCollection.AddItem("Test", 20);
 
         // Assert
         Assert.Single(_inventoryCollection.Items);
@@ -112,16 +64,10 @@ public class InventoryTests
     [Fact]
     public void RemoveItem()
     {
-        // arrange
-        var item = new TestItem
-        {
-            Weight = 20,
-            Name = "Test"
-        };
-        _inventoryCollection.AddItem(item);
+        _inventoryCollection.AddItem("Test", 20);
 
         // Act
-        _inventoryCollection.RemoveItem(new TestItem() { Name = "Test" });
+        _inventoryCollection.RemoveItem("Test");
 
         // Assert
         Assert.Empty(_inventoryCollection.Items);
@@ -130,16 +76,10 @@ public class InventoryTests
     [Fact]
     public void RemoveNotExistingItem()
     {
-        // arrange
-        var item = new TestItem
-        {
-            Weight = 20,
-            Name = "Test"
-        };
-        _inventoryCollection.AddItem(item);
+        _inventoryCollection.AddItem("Test", 20);
 
         // Act
-        _inventoryCollection.RemoveItem(new TestItem() { Name = "Test!" });
+        _inventoryCollection.RemoveItem("Test!");
 
         // Assert
         Assert.Single(_inventoryCollection.Items);
@@ -152,12 +92,7 @@ public class InventoryTests
         var items = new[] { "vasya", "petya", "olga" };
         foreach (var name in items)
         {
-            var item = new TestItem
-            {
-                Weight = 20,
-                Name = name
-            };
-            _inventoryCollection.AddItem(item);
+            _inventoryCollection.AddItem(name, 20);
         }
 
         // Act
@@ -174,12 +109,7 @@ public class InventoryTests
         var items = new[] { "vasya", "petya", "olga" };
         foreach (var name in items)
         {
-            var item = new TestItem
-            {
-                Weight = 20,
-                Name = name
-            };
-            _inventoryCollection.AddItem(item);
+            _inventoryCollection.AddItem(name, 20);
         }
 
         // Act
@@ -196,19 +126,19 @@ public class InventoryTests
         {
             for (int i = 0; i < 40; i++)
             {
-                _inventoryCollection.AddItem(new TestItem() { Name = "Test1", Weight = 1 });
+                _inventoryCollection.AddItem("Test1", 1);
             }
         });
-        
+
         var task2 = Task.Run(() =>
         {
             for (int i = 0; i < 40; i++)
             {
-                _inventoryCollection.AddItem(new TestItem() { Name = "Test2", Weight = 1 });
+                _inventoryCollection.AddItem("Test2", 1);
             }
         });
         await Task.WhenAll(task1, task2);
-        
+
         // Assert
         Assert.Equal(2, _inventoryCollection.Items.Count);
         Assert.Equal(40, _inventoryCollection.Items[0].Weight);

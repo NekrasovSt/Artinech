@@ -4,8 +4,8 @@ namespace Test;
 
 public class Factories
 {
-    public static IInventory<T> CreateInventoryCollection<T>() where T : IItem
+    public static IInventory CreateInventoryCollection()
     {
-        return new Inventory<T>();
+        return new Inventory();
     }
 }
